@@ -13,7 +13,7 @@ class SinglePost extends Component {
   };
 
   componentDidMount() {
-    const postId = this.props.match.params.postId;
+    // const postId = this.props.match.params.postId;
     fetch('URL')
       .then(res => {
         if (res.status !== 200) {
@@ -25,7 +25,7 @@ class SinglePost extends Component {
         this.setState({
           title: resData.post.title,
           author: resData.post.creator.name,
-          date: new Date(resData.post.createdAt).toLocaleDateString('en-US'),
+          date: new Date(resData.post.createdAt).toLocaleDateString('vi-VN'),
           content: resData.post.content
         });
       })
