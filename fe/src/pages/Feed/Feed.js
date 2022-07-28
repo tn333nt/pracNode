@@ -107,6 +107,11 @@ class Feed extends Component {
       editLoading: true
     });
     // Set up data (with image!)
+    const formData = new FormData(); // built-in obj -> contain any data type
+    formData.append('title', postData.title);
+    formData.append('content', postData.content);
+    formData.append('image', postData.image);
+
     let url = 'http://localhost:8080/post';
     let method = 'POST'
 
@@ -117,13 +122,7 @@ class Feed extends Component {
 
     fetch(url, {
       method: method,
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        title: postData.title,
-        content: postData.content,
-      })
+      body: formData // formData auto set headers & convert type
     })
       .then(res => {
         console.log(res, 'res')
