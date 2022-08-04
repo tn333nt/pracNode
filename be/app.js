@@ -39,12 +39,12 @@ app.use(multer({
     fileFilter: fileFilter
 }).single('image'))
 
-app.use('/images', express.static(path.join(__dirname, 'images'))) // construct a path to images folder & serve it 
+app.use('/images', express.static(path.join(__dirname, 'images'))) // serve img 
 
 app.use((req, res, next) => {
     res.setHeader('access-control-allow-origin', '*'); // allow access from any domain 
-    res.setHeader('access-control-allow_methods', 'get, post'); // allow specific http methods from these origins
-    res.setHeader('access-control-allow-headers', 'content-type , authorization'); // allow extra data in the req header
+    res.setHeader('access-control-allow-methods', '*'); // allow specific http methods from these origins
+    res.setHeader('access-control-allow-headers', '*'); // allow extra data in the req header
     next()
 })
 
