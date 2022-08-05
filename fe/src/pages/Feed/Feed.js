@@ -36,7 +36,7 @@ class Feed extends Component {
 
     this.loadPosts();
   }
-  
+
   // statusUpdateHandler = event => {
   //   event.preventDefault();
   //   fetch('URL')
@@ -73,7 +73,9 @@ class Feed extends Component {
       this.setState({ postPage: page });
     }
 
-    fetch('http://localhost:8080/posts?page=' + page) // pass page data through query params
+    fetch('http://localhost:8080/posts?page=' + page, {
+      headers: { Authorization: 'Bearer ' + this.props.token }
+    })
       .then(res => {
         if (res.status !== 200) {
           throw new Error('Failed to fetch posts.');
@@ -139,7 +141,8 @@ class Feed extends Component {
 
     fetch(url, {
       method: method,
-      body: formData // formData auto set headers & convert type
+      body: formData, // formData auto set headers & convert type
+      headers: { Authorization: 'Bearer ' + this.props.token }
     })
       .then(res => {
         console.log(res, 'res')
@@ -159,7 +162,7 @@ class Feed extends Component {
         };
 
         this.setState(prevState => {
-          let updatedPosts = [...prevState.posts]; 
+          let updatedPosts = [...prevState.posts];
 
           if (prevState.editPost) { // new da mo edit modal
             const postIndex = prevState.posts.findIndex( // find index of post of opening edit modal
@@ -196,7 +199,8 @@ class Feed extends Component {
     const url = 'http://localhost:8080/post/' + postId
 
     fetch(url, {
-      method: 'DELETE'
+      method: 'DELETE',
+      headers: { Authorization: 'Bearer ' + this.props.token }
     })
       .then(res => {
         if (res.status !== 200 && res.status !== 201) {

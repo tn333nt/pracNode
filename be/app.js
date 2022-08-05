@@ -6,6 +6,7 @@ const multer = require('multer')
 const { v4: uuidv4 } = require('uuid')
 
 const feedRoutes = require('./routes/feed')
+const authRoutes = require('./routes/auth')
 
 const app = express()
 const port = 8080
@@ -48,13 +49,15 @@ app.use((req, res, next) => {
     next()
 })
 
+app.use(authRoutes)
 app.use(feedRoutes)
 
 app.use((err, req, res, next) => {
     console.log(err);
     const status = err.statusCode || 500
     const msg = err.message
-    res.status(status).json({ message: msg })
+    const data = err.data
+    res.status(status).json({ message: msg , error : data})
 })
 
 mongoose
