@@ -1,4 +1,5 @@
 import React, { Component, Fragment } from 'react';
+import openSocket from 'socket.io-client'
 
 import Post from '../../components/Feed/Post/Post';
 import Button from '../../components/Button/Button';
@@ -15,26 +16,78 @@ class Feed extends Component {
     posts: [],
     totalPosts: 0,
     editPost: null,
-    status: '', // input text
+    status: '',
     postPage: 1,
     postsLoading: true,
     editLoading: false
   };
 
   componentDidMount() {
-    fetch('http://localhost:8080/posts')
-      .then(res => {
-        if (res.status !== 200) {
-          throw new Error('Failed to fetch user status.');
-        }
-        return res.json();
-      })
-      .then(resData => {
-        this.setState({ status: resData.status });
-      })
-      .catch(this.catchError);
+    // fetch('http://localhost:8080/auth/status', {
+    //   headers: {
+    //     Authorization: 'Bearer ' + this.props.token
+    //   }
+    // })
+    //   .then(res => {
+    //     if (res.status !== 200) {
+    //       throw new Error('Failed to fetch user status.');
+    //     }
+    //     return res.json();
+    //   })
+    //   .then(resData => {
+    //     this.setState({ status: resData.status });
+    //   })
+    //   .catch(this.catchError);
 
     this.loadPosts();
+
+    // react to specific emitted event
+    const socket = openSocket('http://localhost:8080')
+    socket.on('eventName', sentDataPkg => {
+      if (sentDataPkg.action === 'create') {
+        this.addPost(sentDataPkg.post)
+      } 
+      else if (sentDataPkg.action === 'update') {
+        this.updatePost(sentDataPkg.post)
+      } 
+      else if (sentDataPkg.action === 'delete') {
+        this.loadPosts()
+      }
+    })
+  }
+
+  // react to a new post being created -> render in the client instantly
+  // call whenever create a new post
+  addPost = post => {
+    this.setState(prevState => {
+      const updatedPosts = [...prevState.posts];
+      // neu vay sau khi them auto ve page 1 mb (nen chi can update page 1) ?
+      if (prevState.postPage === 1) {
+        if (prevState.posts.length >= 2) {
+          // have multiple pages + being page 1 -> remove last item
+          updatedPosts.pop();
+        }
+        // being page 1 -> add new item to the beggining
+        updatedPosts.unshift(post);
+      }
+      return {
+        posts: updatedPosts,
+        totalPosts: prevState.totalPosts + 1
+      };
+    });
+  }
+
+  updatePost = post => {
+    this.setState(prevState => {
+      const updatedPosts = [...prevState.posts];
+      const updatePostIndex = updatedPosts.findIndex(p => p._id === post._id)
+      if (updatePostIndex >= 0) {
+        updatedPosts[updatePostIndex] = post
+      }
+      return {
+        posts: updatedPosts
+      };
+    });
   }
 
   // statusUpdateHandler = event => {
@@ -73,8 +126,10 @@ class Feed extends Component {
       this.setState({ postPage: page });
     }
 
-    fetch('http://localhost:8080/posts?page=' + page, {
-      headers: { Authorization: 'Bearer ' + this.props.token }
+    fetch('http://localhost:8080/feed/posts?page=' + page, {
+      headers: {
+        Authorization: 'Bearer ' + this.props.token
+      }
     })
       .then(res => {
         if (res.status !== 200) {
@@ -83,14 +138,12 @@ class Feed extends Component {
         return res.json();
       })
       .then(resData => {
-        console.log(resData, 123)
-
         this.setState({
           posts: resData.posts.map(post => {
             return {
               ...post,
               imagePath: post.imageUrl
-            }
+            };
           }),
           totalPosts: resData.totalItems,
           postsLoading: false
@@ -162,20 +215,19 @@ class Feed extends Component {
         };
 
         this.setState(prevState => {
-          let updatedPosts = [...prevState.posts];
-
-          if (prevState.editPost) { // new da mo edit modal
-            const postIndex = prevState.posts.findIndex( // find index of post of opening edit modal
-              p => p._id === prevState.editPost._id
-            );
-            updatedPosts[postIndex] = post; // update found post w/ new data
-
-          } else if (prevState.posts.length < 2) { // neu total items co nhieu nhat 1 thi concat new data ? de index cung dc ma ?
-            updatedPosts = prevState.posts.concat(post);
-          }
+          // return all logic for editing post -> avoid execute 2 times
+          // let updatedPosts = [...prevState.posts];
+          // if (prevState.editPost) { // new da mo edit modal
+          //   const postIndex = prevState.posts.findIndex( // find index of post of opening edit modal
+          //     p => p._id === prevState.editPost._id
+          //   );
+          //   updatedPosts[postIndex] = post; // update found post w/ new data
+          // } else if (prevState.posts.length < 2) { // neu total items co nhieu nhat 1 thi concat new data ? de index cung dc ma ?
+          //   updatedPosts = prevState.posts.concat(post);
+          // }
 
           return {
-            posts: updatedPosts,
+            // posts: updatedPosts,
             isEditing: false,
             editPost: null,
             editLoading: false
@@ -209,11 +261,11 @@ class Feed extends Component {
         return res.json();
       })
       .then(resData => {
-        console.log(resData);
-        this.setState(prevState => {
-          const updatedPosts = prevState.posts.filter(p => p._id !== postId);
-          return { posts: updatedPosts, postsLoading: false };
-        });
+        this.loadPosts()
+        // this.setState(prevState => {
+        //   const updatedPosts = prevState.posts.filter(p => p._id !== postId);
+        //   return { posts: updatedPosts, postsLoading: false };
+        // });
       })
       .catch(err => {
         console.log(err);
@@ -240,7 +292,7 @@ class Feed extends Component {
           onCancelEdit={this.cancelEditHandler}
           onFinishEdit={this.finishEditHandler}
         />
-        {/* <section className="feed__status">
+        <section className="feed__status">
           <form onSubmit={this.statusUpdateHandler}>
             <Input
               type="text"
@@ -253,7 +305,7 @@ class Feed extends Component {
               Update
             </Button>
           </form>
-        </section> */}
+        </section>
         <section className="feed__control">
           <Button mode="raised" design="accent" onClick={this.newPostHandler}>
             New Post

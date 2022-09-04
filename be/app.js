@@ -49,6 +49,7 @@ app.use((req, res, next) => {
     next()
 })
 
+// set up routes for http req 
 app.use(authRoutes)
 app.use(feedRoutes)
 
@@ -62,6 +63,15 @@ app.use((err, req, res, next) => {
 
 mongoose
     .connect(connectionURL)
-    .then(() => app.listen(port))
+    .then(() => {
+        const newNodeServer = app.listen(port) 
+        // use http server to establish web socket connection
+        const io = require('./socket').init(newNodeServer)
+
+        // execute for every new client that connects
+        io.on('connection', socket => {
+            console.log(socket, 'socket/connectedClient/connection ?')
+        })
+    })
     .catch(err => console.log(err))
 

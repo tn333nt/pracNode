@@ -17,6 +17,7 @@ exports.signup = (req, res, next) => {
     const password = req.body.password
     const name = req.body.name
 
+    // save user with the hased pass
     bcrypt
         .hash(password, 12)
         .then(hashedPw => {
@@ -32,8 +33,6 @@ exports.signup = (req, res, next) => {
         })
         .catch(err => next(err))
 
-    User.find()
-        .then()
 }
 
 
@@ -42,13 +41,11 @@ exports.login = (req, res, next) => {
     const password = req.body.password
     let user
 
-    console.log(email, password, 123)
-
     User.findOne({ email: email })
         .then(foundUser => {
             if (!foundUser) {
-                const err = new Error('no found user w/ this email')
-                err.statusCode = 401 // not authenticated
+                const err = new Error('not found user with this email')
+                err.statusCode = 401 
                 throw err
             }
             user = foundUser
@@ -62,24 +59,17 @@ exports.login = (req, res, next) => {
             }
 
             // gen Json Web Token if user entered valid credentials
-
-            const token = jwt.sign( // sign new jwt from the payload
+            const token = jwt.sign( 
                 { 
                     email: user.email,
                     userId: user._id.toString()
                 },
                 'privatekey',
-                { expiresIn: '1h' } // the token become invalid after 1h
+                { expiresIn: '1h' } 
             ) 
 
             res.status(200).json({token:token, userId: user._id.toString()})
 
-            // 1 chuoi dc ma hoa dc gui kem khi thong tin dang nhap chinhxac
-            // luu o phan storage phia user
-            // va dc gui di trong tat ca nhung req tiep theo cua user do
-            // de xac nhan xem ng dung do la ai co nhung quyen gi
-            // and later when decode can use encoded info in it
-
         })
-        .catch(err => next(err)) // network err / some err in the db
+        .catch(err => next(err)) // errs with db (network/...)
 }
