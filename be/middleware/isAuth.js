@@ -6,9 +6,8 @@ module.exports = (req, res, next) => {
     // extract the token from icm req
     const authHeader = req.get('Authorization') // get data from headers    
     if (!authHeader) {
-        const err = new Error('Invalid authorization header')
-        err.statusCode = 401
-        throw err
+        req.isAuth = false
+        return next() // continue to the next mw
     }
 
     const token = authHeader.split(' ')[1]
@@ -17,17 +16,19 @@ module.exports = (req, res, next) => {
     try {
         decodedToken = jwt.verify(token, 'privatekey') // both decode & verify the token
     } catch {
-        err.statusCode = 500
-        throw err
+        req.isAuth = false
+        return next()
     }
 
     if (!decodedToken) {
-        const err = new Error('unable to verify the token')
-        err.statusCode = 401
-        throw err
+        req.isAuth = false
+        return next()
     }
 
     // store userId in the req to pass to next middlewares (to identify user)\
     req.userId = decodedToken.userId
+    req.isAuth = true
+    next()
 
+    // then decide auth in resolvers
 }

@@ -9,6 +9,8 @@ const { graphqlHTTP } = require('express-graphql')
 // use graphql endpoints instead
 const schema = require('./graphql/schema')
 const resolvers = require('./graphql/resolvers')
+const auth = require('./middleware/isAuth')
+const clearImage = require('./util/clearImage')
 
 const app = express()
 const port = 8080
@@ -48,10 +50,33 @@ app.use((req, res, next) => {
     res.setHeader('access-control-allow-origin', '*'); // allow access from any domain 
     res.setHeader('access-control-allow-methods', '*'); // allow specific http methods from these origins
     res.setHeader('access-control-allow-headers', '*'); // allow extra data in the req header
-    if (res.method === 'OPTIONS') {
+    if (res.method !== 'POST') {
         return res.sendStatus(200) // temp solution : return before reach exp-gql
     }
     next()
+})
+
+// run on every req that reaches to gql endpoint
+app.use(auth)
+
+// upload file
+app.put('postImg', (req, res, next) => {
+    if (!req.isAuth) {
+        const err = new Error('not authenticated')
+        err.status = 401
+        throw err
+    }
+
+    if (!req.file) {
+        // if throw err => only help for case 'not have img' (add) , not 'not choose img' (update)
+        return res.status(200).json({ message: 'no file provided' })
+    }
+
+    if (req.body.oldImage) {
+        clearImage(req.body.oldImage)
+    }
+
+    return res.status(201).json({ filePath: req.file.path }) // the path where multer store the img
 })
 
 // 
@@ -61,10 +86,10 @@ app.use('/graphql', graphqlHTTP({
     graphiql: true, // GET req to get graphiql interface
 
     // handle err
-    formatError(err) {
+    customFormatErrorFn(err) {
         if (!err.originalError) { // detected thrown err
             return err
-        } 
+        }
         const data = err.originalError.data
         const message = err.message || 'an error occurred'
         const status = err.originalError.status || 500
@@ -85,3 +110,6 @@ mongoose
     .then(() => app.listen(port))
     .catch(err => console.log(err))
 
+
+// dependency conflict ? => cannot install node modules
+// hinh nhu do version cua express-graphql vs new ver cua graphql
