@@ -68,7 +68,6 @@ app.put('postImg', (req, res, next) => {
     }
 
     if (!req.file) {
-        // if throw err => only help for case 'not have img' (add) , not 'not choose img' (update)
         return res.status(200).json({ message: 'no file provided' })
     }
 
@@ -76,7 +75,7 @@ app.put('postImg', (req, res, next) => {
         clearImage(req.body.oldImage)
     }
 
-    return res.status(201).json({ filePath: req.file.path }) // the path where multer store the img
+    return res.status(201).json({ filePath: req.file.path }) 
 })
 
 // 
@@ -110,6 +109,3 @@ mongoose
     .then(() => app.listen(port))
     .catch(err => console.log(err))
 
-
-// dependency conflict ? => cannot install node modules
-// hinh nhu do version cua express-graphql vs new ver cua graphql

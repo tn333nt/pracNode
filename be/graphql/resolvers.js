@@ -1,6 +1,6 @@
 // define the logic that is executed for icm queries
 const bcryptjs = require('bcryptjs')
-const validator = require('validator') // express-validator uses behind the scenes
+const validator = require('validator') 
 const jwt = require('jsonwebtoken')
 
 const User = require('../models/user')
@@ -45,7 +45,6 @@ module.exports = {
                         return user.save()
                     })
                     .then(user => {
-                        // return for ReturnedDataAfterMutate
                         return {
                             ...user._doc, // pull out data of doc
                             _id: user._id.toString() // overwrite a field
@@ -167,14 +166,6 @@ module.exports = {
                     })
                     .then(posts => {
                         return {
-                            // posts: posts.map(p => {
-                            //     return {
-                            //         ...p,
-                            //         _id: p._id.toString(),
-                            //         createdAt: p.createdAt.toIOString(),
-                            //         updatedAt: p.updatedAt.toIOString()
-                            //     }
-                            // }),
                             posts: posts,
                             totalItems: totalItems
                         }
