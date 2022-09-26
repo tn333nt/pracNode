@@ -1,10 +1,15 @@
 const path = require('path');
+const fs = require('fs');
+const https = require('https'); // HyperText Transfer Protocal Secure
 
 const express = require('express')
 const mongoose = require('mongoose')
 const multer = require('multer')
 const { v4: uuidv4 } = require('uuid')
 const { graphqlHTTP } = require('express-graphql')
+const helmet = require('helmet')
+const compression = require('compression')
+const morgan = require('morgan')
 
 // use graphql endpoints instead
 const schema = require('./graphql/schema')
@@ -13,8 +18,26 @@ const auth = require('./middleware/isAuth')
 const clearImage = require('./util/clearImage')
 
 const app = express()
-const port = 8080
-const connectionURL = 'mongodb+srv://test:bJYVI29LEAjl147U@cluster0.ti4jx.mongodb.net/message'
+
+// 1. using environment variables -> flexible in dev & pro
+const port = process.env.PORT || 8080
+const connectionURL =
+    `mongodb+srv://${process.env.MONGO_USER}:${process.env.MONGO_PASSWORD}@cluster0.ti4jx.mongodb.net/${process.env.MONGO_DEFAULT_DATABASE}`
+
+// special ev -> express uses by default to determine the env MODE + helpful in production
+console.log(process.env.NODE_ENV)
+
+// 
+// Sync = block code exc until the file is read
+const privateKey = fs.readFileSync('server.key')
+const certificate = fs.readFileSync('server.cert')
+
+
+// create a write stream -> 
+const accessLogStream = fs.createWriteStream(
+    path.join(__dirname, 'access.log'), // define a path from current file to new one in the same folder
+    { flags: 'a' } // append new data to file
+)
 
 const fileStorage = multer.diskStorage({ // config where the file get stored
     destination: (req, file, callback) => {
@@ -38,6 +61,19 @@ const fileFilter = (req, file, callback) => {
 }
 
 app.use(express.json())
+
+// 2. setting SECURE RES HEADERS using Helmet 
+// -> reduce the err output details (both default & custom) (esp with a lot of data added to them)
+// -> make sure users receive as little info as possible
+app.use(helmet())
+
+// 3. compress -> reduce the size of downloading assets -> load files faster (most r supported by hosting provider)
+app.use(compression())
+
+// 4. logging request data to passed file -> always know what's going on on server (more organised)
+app.use(morgan('combined', { stream: accessLogStream }))
+// For a more advanced/ detailed approach on logging (with higher control), see this article: https://blog.risingstack.com/node-js-logging-tutorial/
+
 
 app.use(multer({
     storage: fileStorage,
@@ -75,7 +111,7 @@ app.put('postImg', (req, res, next) => {
         clearImage(req.body.oldImage)
     }
 
-    return res.status(201).json({ filePath: req.file.path }) 
+    return res.status(201).json({ filePath: req.file.path })
 })
 
 // 
@@ -106,6 +142,23 @@ app.use((err, req, res, next) => {
 
 mongoose
     .connect(connectionURL)
-    .then(() => app.listen(port))
-    .catch(err => console.log(err))
+    .then(() => {
 
+// 5. using ssl (/tls - newer version) connection to create custom certificate (for testing)
+// install openssl in windows : https://wiki.openssl.org/index.php/Binaries then run :
+// openssl req -nodes -new -x509 -keyout server.key -out server.cert
+// -> fill values in terminal to create 'server identity' 
+// -> get 2 files : cert (-> send to the client) & server key (stay on the server)
+
+        https
+            .createServer({
+                key: privatekey,
+                cert: certificate
+            }, // config
+                app) // req handler
+            .listen(port)
+
+// browser doesn't accept self-signed cert
+// advanced -> proceed to localhost
+    })
+    .catch(err => console.log(err))
